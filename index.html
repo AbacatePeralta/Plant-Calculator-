@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 700px;
+      max-width: 800px;
       margin: 30px auto;
       background: #f8f9fa;
       color: #333;
@@ -22,12 +22,18 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       margin-bottom: 20px;
     }
+    .tier-title {
+      font-weight: bold;
+      font-size: 1.1em;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      color: #0056b3;
+    }
     label {
       display: block;
       margin: 8px 0 4px;
-      font-weight: bold;
     }
-    input {
+    input[type="number"] {
       width: 100%;
       padding: 6px;
       border: 1px solid #ccc;
@@ -47,6 +53,9 @@
     }
     button:hover {
       background: #219150;
+    }
+    .tier-select {
+      margin: 5px 0;
     }
     .best {
       background: #d4edda;
@@ -71,6 +80,9 @@
     <label for="slots">Número de slots:</label>
     <input type="number" id="slots" value="15" min="1">
 
+    <h2>Selecionar Tiers</h2>
+    <div id="tier-selectors"></div>
+
     <h2>Preços de Venda</h2>
     <div id="plant-inputs"></div>
 
@@ -83,62 +95,114 @@
   </div>
 
   <script>
-    // === Base de dados ===
     const plants = {
-      "Trigo": { buy: 5, grow_s: 22 },
-      "Batata": { buy: 10, grow_s: 22 },
-      "Maçã": { buy: 10, grow_s: 24 },
-      "Tomate": { buy: 40, grow_s: 30 },
-      "Parsnip": { buy: 40, grow_s: 30 },
-      "Mirtilo": { buy: 60, grow_s: 60 },
-      "BananaTree": { buy: 60, grow_s: 60 },
-      "Cenoura": { buy: 60, grow_s: 60 },
-      "Pessego": { buy: 150, grow_s: 60 },
-      "Morango": { buy: 150, grow_s: 60 },
-      "Milho": { buy: 150, grow_s: 60 }
+      "Trigo": { buy: 5, grow_s: 22, tier: "Starter" },
+
+      "Batata": { buy: 10, grow_s: 22, tier: "Tier 1" },
+      "Maçã": { buy: 10, grow_s: 24, tier: "Tier 1" },
+
+      "Tomate": { buy: 40, grow_s: 30, tier: "Tier 2" },
+      "Parsnip": { buy: 40, grow_s: 30, tier: "Tier 2" },
+      "Laranjeira": { buy: 40, grow_s: 30, tier: "Tier 2" },
+
+      "Mirtilo": { buy: 60, grow_s: 60, tier: "Tier 3" },
+      "Bananeira": { buy: 60, grow_s: 60, tier: "Tier 3" },
+      "Cenoura": { buy: 60, grow_s: 60, tier: "Tier 3" },
+
+      "Pêssego": { buy: 150, grow_s: 60, tier: "Tier 4" },
+      "Morango": { buy: 150, grow_s: 60, tier: "Tier 4" },
+      "Milho": { buy: 150, grow_s: 60, tier: "Tier 4" },
+
+      "Abobora": { buy: 400, grow_s: 90, tier: "Tier 5" },
+      "Melancia": { buy: 400, grow_s: 90, tier: "Tier 5" },
+      "Pera": { buy: 400, grow_s: 90, tier: "Tier 5" },
+
+      "Oyster Mushroom": { buy: 500, grow_s: 42, tier: "Tier 6" },
+      "Parsley": { buy: 500, grow_s: 42, tier: "Tier 6" },
+      "Turnip": { buy: 500, grow_s: 42, tier: "Tier 6" },
+
+      "Shiitak": { buy: 550, grow_s: 60, tier: "Tier 7" },
+      "Leek": { buy: 550, grow_s: 57, tier: "Tier 7" },
+      "Muddy Carrot": { buy: 550, grow_s: 60, tier: "Tier 7" },
+
+      "Glow Bulb": { buy: 650, grow_s: 60, tier: "Tier 8" },
+      "Glow Lichen": { buy: 650, grow_s: 60, tier: "Tier 8" },
+      "Sporebloom": { buy: 650, grow_s: 60, tier: "Tier 8" },
+
+      "Chive": { buy: 750, grow_s: 74, tier: "Tier 9" },
+      "Ash Sprout": { buy: 750, grow_s: 78, tier: "Tier 9" },
+      "Glow Gherkin": { buy: 750, grow_s: 74, tier: "Tier 9" },
+
+      "Truffle": { buy: 850, grow_s: 142, tier: "Tier 10" },
+      "Crystal Farm": { buy: 850, grow_s: 150, tier: "Tier 10" },
+      "Mint": { buy: 850, grow_s: 150, tier: "Tier 10" }
     };
 
-    // Cria os campos para digitar preços
+    // Gera checkboxes de Tiers
+    const uniqueTiers = [...new Set(Object.values(plants).map(p => p.tier))];
+    const tierContainer = document.getElementById("tier-selectors");
+    uniqueTiers.forEach(tier => {
+      const div = document.createElement("div");
+      div.classList.add("tier-select");
+      div.innerHTML = `<input type="checkbox" id="tier-${tier}" checked>
+                       <label for="tier-${tier}">${tier}</label>`;
+      tierContainer.appendChild(div);
+    });
+
+    // Cria inputs de preço agrupados por Tier
     const container = document.getElementById("plant-inputs");
-    Object.keys(plants).forEach(name => {
-      const label = document.createElement("label");
-      label.innerText = `${name} (preço de venda):`;
-      const input = document.createElement("input");
-      input.type = "number";
-      input.step = "0.01";
-      input.id = `price-${name}`;
-      container.appendChild(label);
-      container.appendChild(input);
+    uniqueTiers.forEach(tier => {
+      const title = document.createElement("div");
+      title.className = "tier-title";
+      title.textContent = tier;
+      container.appendChild(title);
+
+      Object.entries(plants).forEach(([name, data]) => {
+        if (data.tier === tier) {
+          const label = document.createElement("label");
+          label.innerText = `${name} (preço de venda):`;
+          const input = document.createElement("input");
+          input.type = "number";
+          input.step = "0.01";
+          input.id = `price-${name}`;
+          container.appendChild(label);
+          container.appendChild(input);
+        }
+      });
     });
 
     function calcular() {
       const slots = parseInt(document.getElementById("slots").value);
-      let results = [];
 
-      // Calcula lucro e taxa de cada planta
+      // Pega Tiers selecionados
+      const selectedTiers = uniqueTiers.filter(tier => 
+        document.getElementById(`tier-${tier}`).checked
+      );
+
+      let results = [];
       for (const [name, data] of Object.entries(plants)) {
+        if (!selectedTiers.includes(data.tier)) continue; // pula se o tier não foi selecionado
         const sale = parseFloat(document.getElementById(`price-${name}`).value);
-        if (!sale) continue; // ignora plantas sem preço
+        if (!sale) continue;
         const profit = sale - data.buy;
         const rate = profit / data.grow_s;
-        results.push({ name, profit, rate, grow: data.grow_s });
+        results.push({ name, profit, rate, grow: data.grow_s, tier: data.tier });
       }
 
       if (results.length === 0) {
         document.getElementById("resultado").innerHTML =
-          "<p style='color:red;'>⚠️ Digite pelo menos um preço para calcular!</p>";
+          "<p style='color:red;'>⚠️ Nenhuma planta válida foi selecionada para calcular.</p>";
         return;
       }
 
-      // Ordena do maior para o menor
       results.sort((a, b) => b.rate - a.rate);
       const maxRate = results[0].rate;
 
-      let html = "<h3>Melhores plantas:</h3>";
+      let html = `<h3>Melhores plantas (entre os tiers selecionados):</h3>`;
       results.forEach(r => {
         const isBest = r.rate === maxRate;
         html += `<div class="${isBest ? "best" : "other"}">
-                  ${isBest ? "⭐ " : ""}<b>${r.name}</b> — 
+                  ${isBest ? "⭐ " : ""}<b>${r.name}</b> (${r.tier}) — 
                   Lucro: ${r.profit}$ | Tempo: ${r.grow}s | 
                   Taxa: ${(r.rate).toFixed(6)} $/s/slot
                  </div>`;
